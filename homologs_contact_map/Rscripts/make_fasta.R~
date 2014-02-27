@@ -1,0 +1,91 @@
+library('hash')
+letter_code<-hash(keys=c("ALA","ARG","ASN","ASP","CYS","GLN","GLU","GLY","HIS","ILE","LEU","LYS","MET","PHE","PRO","SER","THR","TRP","TYR","VAL"),values=c("A","R","N","D","C","Q","E","G","H","I","L","K","M","F","P","S","T","W","Y","V"))
+space_numbers<-c(6,5,1,4,1,3,1,1,4,1,3,8,8,8,6,6,6,4,2,2)
+space_classes<-c("character","numeric",rep('character',6),"numeric",rep('character',2),rep('numeric',5),rep('character',4))
+sum<-0;
+space_numbers_starts<-array(dim=length(space_numbers)-1)
+space_numbers_ends<-array(dim=length(space_numbers)-1)
+k<-1
+for(i in space_numbers){
+	space_numbers_ends[k]<-sum+i
+	if (k==1) space_numbers_starts[k]<-1
+	else space_numbers_starts[k]<-space_numbers_ends[k-1]+1
+	sum<-sum+i
+	k<-k+1
+}
+
+read_atom_pdb<-function(r){
+	
+	rr<-array(dim=length(r))
+	for(k in 1:length(r)){
+		x<-substring(r[k],space_numbers_starts,space_numbers_ends)
+	#	if (k<10) print(x)
+		y<-paste(x,collapse=";")
+	#	if (k<10) print(y)
+		rr[k]<-y
+	}
+	
+	#rrs<-gsub(" +",";",rr)
+	#print(rrs)
+	con<-textConnection(rr)
+	t<-read.csv(con,sep=";",header=F,stringsAsFactors=F,colClasses=space_classes)
+	#print(t[t[,6]=='A',])
+	return(t)
+}
+
+
+dir=commandArgs(TRUE)[1]
+
+fasta<-commandArgs(TRUE)[2]
+pdf_file<-commandArgs(TRUE)[3]
+
+if (is.na(pdf_file)) print("pdf file is NA, not writing")
+
+unlink(fasta)
+
+stat<-c();
+
+v<-list.files(dir)
+
+for(f in v){
+	print(f)
+	con <- file(paste(dir,f,sep=""))
+	on.exit(close(con))
+
+	r<-readLines(con)
+	resi_sh2<-read_atom_pdb(r)
+	
+	resi_old<-sort(unique(resi_sh2[,9]))
+	k<-1
+	seq_a<-sapply(resi_old,function(x){
+		resi_sh2[resi_sh2[,9]==x,9]<<-k
+		k<<-k+1
+		y<-resi_sh2[resi_sh2[,9]==(k-1),6][1]
+		return(letter_code[[y]])})
+
+	seq=paste(seq_a,collapse="")
+
+	stat<-c(stat,nchar(seq))
+	print(seq)
+
+	name<-gsub(".*/",'',f)
+	name<-gsub("-renum.bead",'',name)
+	name<-paste(">",name,"_",nchar(seq),sep="")
+
+	write(name,fasta,append=T)
+	write(seq,fasta,append=T)
+}
+print(paste("Min of SH2 domain length:",min(stat)))
+print(paste("Max of SH2 domain length:",max(stat)))
+print(paste("Mean of SH2 domain length:",mean(stat)))
+print(paste("Std of SH2 domain length:",sd(stat)))
+
+if (!is.na(pdf_file)){
+pdf(pdf_file)
+hist(stat,breaks=10,main="",xlab="sequence length in amino acids")
+dev.off()
+}
+
+warnings()
+
+

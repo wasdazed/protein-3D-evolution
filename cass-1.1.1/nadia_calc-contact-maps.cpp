@@ -1,0 +1,56 @@
+/* Program to calculate and write down contact maps for 2-bead structures.
+ */
+
+#include "TwoBeadStructure.h"
+#include "myUtils.h"
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+int main(int argc, char *argv[]){
+
+	string usage = " [protein 1 bead file] [output file 1]";
+
+	/* Usage message on bad input.
+	 */
+	if(argc < 3){
+		cout << "Usage: " << argv[0] << usage << endl;
+		exit(1);
+	}
+
+	/* Read arguments.
+	 */
+	ifstream protOneFile(argv[1]);
+	ofstream outOneFile(argv[2]);
+	
+	/* Define variables.
+	 */
+
+	/* Read structures into memory.
+	 */
+	shared_ptr<TwoBeadStructure> partOne(new TwoBeadStructure(TwoBeadStructure::parseBeadFile(protOneFile)));
+	
+	/* Close input files.
+	*/
+	protOneFile.close();
+	
+	/* Get contacts
+	 */
+	vector< vector<int> > contacts = partOne->contactMap(4.5);
+
+	/* Output to disk.
+	 */
+	int i,j;
+	for(i = 0; i < contacts.size(); i++){
+		for(j = 0; j < contacts.size(); j++){
+			outOneFile << contacts[i][j];
+		}
+		outOneFile << "\n";
+	}
+
+	/* Finish.
+	*/
+	outOneFile.close();
+	exit(0);
+}

@@ -1,0 +1,37 @@
+#Reading energy distributions from file...
+#Range of the distributions from disk:
+#130.147
+#433.003
+#4229.58
+#790.2
+#2501.97
+#120.863
+#1
+#Removing non-informative dimensions...
+#Scaling remaining dimensions to equal range...
+#Range of the distributions after scaling:
+#4229.58
+#4229.58
+#4229.58
+#4229.58
+#4229.58
+#4229.58
+#4229.58
+#Calculating initial probability density...
+#MCMC intialized.
+#Steps: 100000
+#Step size (variance): 0.1 (0.1)
+#Starting temperature: 0.1
+#Initial state (probability density + parameters): 7.14215	0.5	0.5	0.5	0.5	0.5	0.5	0.5
+#Current state of the chain:
+#8.89289	0.665096	0.891974	0.195422	0.870623	0.285503	0.862069	0.610876
+#Best sampled state:
+#9.17761	0.755351	0.738701	0.122315	0.792069	0.420992	0.964922	0.02956
+#Final scaling factors:
+0.197534
+0.19318
+0.031987
+0.207136
+0.110095
+0.252339
+0.00773032

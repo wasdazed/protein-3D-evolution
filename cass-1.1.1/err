@@ -1,0 +1,35 @@
+g++ -c -std=c++0x AllAtomStructure.cpp
+AllAtomStructure.cpp: In member function ‘virtual std::shared_ptr<Structure> AllAtomStructure::threadSequence(std::string)’:
+AllAtomStructure.cpp:257:23: error: ‘fork’ was not declared in this scope
+  pid_t forkPid = fork();
+                       ^
+AllAtomStructure.cpp:276:18: error: ‘dup2’ was not declared in this scope
+   dup2(filePtr, 1);
+                  ^
+AllAtomStructure.cpp:281:16: error: ‘close’ was not declared in this scope
+   close(filePtr);
+                ^
+AllAtomStructure.cpp:285:147: error: ‘execlp’ was not declared in this scope
+   execlp(SCWRL_EXECUTABLE, SCWRL_EXECUTABLE, "-i", structFileOrig.c_str(), "-o", structFileNew.c_str(), "-s", seqFile.c_str(), SCWRL_OPTIONS, NULL);
+                                                                                                                                                   ^
+AllAtomStructure.cpp:309:28: error: ‘usleep’ was not declared in this scope
+    usleep(SCWRL_CHECK_DELAY);
+                            ^
+AllAtomStructure.cpp: In member function ‘virtual std::shared_ptr<Structure> AllAtomStructure::adjustSidechains()’:
+AllAtomStructure.cpp:443:23: error: ‘fork’ was not declared in this scope
+  pid_t forkPid = fork();
+                       ^
+AllAtomStructure.cpp:462:18: error: ‘dup2’ was not declared in this scope
+   dup2(filePtr, 1);
+                  ^
+AllAtomStructure.cpp:467:16: error: ‘close’ was not declared in this scope
+   close(filePtr);
+                ^
+AllAtomStructure.cpp:471:124: error: ‘execlp’ was not declared in this scope
+   execlp(SCWRL_EXECUTABLE, SCWRL_EXECUTABLE, "-i", structFileOrig.c_str(), "-o", structFileNew.c_str(), SCWRL_OPTIONS, NULL);
+                                                                                                                            ^
+AllAtomStructure.cpp:495:28: error: ‘usleep’ was not declared in this scope
+    usleep(SCWRL_CHECK_DELAY);
+                            ^
+Makefile:155: recipe for target 'AllAtomStructure.o' failed
+make: *** [AllAtomStructure.o] Error 1

@@ -1,0 +1,352 @@
+Code for the CASS (Coarse-grained Artificial Sequence Simulator) software
+package. Can be used for running simulations of protein evolution, sampling
+of sequences based on folding stability, tests of biophysical models of 
+sequence evolution (and various other tasks) as described in Grahnen et al
+(2011, BMC Evol Biol 11:361) and Grahnen and Liberles, 2012 (TEB 4:1). Refer 
+to those papers for example workflows and properties of the models. See "Basic 
+usage" below for a quickstart guide, and "Advanced usage" for conducting more
+sophisticated simulations and related tasks.
+
+Version: 1.1
+Last updated: 2013-05-23
+License: GNU Public License v3, see license.txt.
+
+Maintainer: Dohyup Kim (dkim3@uwyo.edu)
+Original author: Johan Grahnen (johan.grahnen@biology.gatech.edu)
+Contributor(s): Nadia Bykova (4noodle@gmail.com)
+
+INSTALLATION
+------------
+
+To compile and link all the executables:
+
+	make all
+
+To clean up object files:
+
+	make clean
+
+See Makefile for individual targets.
+
+Consider installing SCWRL before proceeding: it is required for full
+functionality of the included programs. See "Troubleshooting" below.
+
+BASIC USAGE
+-----------
+
+Generally, all the programs output a usage example when invoked without
+parameters. Example files in the data/ directory show examples of
+expected input and output formats. Some scripts for post-processing simulation
+output and structures and included in the scripts/ directory. On bad input, 
+programs will often (but not always!) stop executing with an error message.
+
+1) Optional: Download a PDB file showing a complex of two proteins (or a 
+   protein and a short peptide). 
+   
+   The structure of the SAP protein in complex with its ligand SLAM is already 
+   provided as example data, so you can skip to step #3 if desired.
+
+   Example: data/1d4t.pdb.
+
+2) Optional: If you downloaded your own structure in step #1, split each chain 
+   into a separate file, and re-number the amino acids from 1 to N. Remove 
+   everything that isn't an ATOM record, including solvent molecules and other 
+   HETATM lines. Designate one molecule as the protein (which will evolve) and 
+   the second molecule as the ligand (which will stay static throughout). 
+   
+   Examples: data/1d4tA-renum.pdb (protein), data/1d4tB.pdb (ligand).
+
+   Optional: run SCWRL 3.0 (or SCWRL 4.0 in no-hydrogen mode) on the resulting
+   files to eliminate any steric clashes. Can also be run on the whole
+   complex to eliminate protein-ligand clashes.
+
+3) Convert structures to 2-bead format:
+
+   ./pdb2bead data/1d4tA-renum.pdb test.bead
+   ./pdb2bead data/1d4tB.pdb test2.bead
+
+   Example output: data/1d4tA-renum.bead, data/1d4tB.bead.
+
+   Optional: optimize the internal energy of the complex using
+
+   ./minimize-complex data/1d4tA-renum.bead data/1d4tB.bead test-adjusted.bead test2-adjusted.bead
+
+   Example output: data/1d4tA-renum-adjusted.bead, data/1d4tB-adjusted.bead.
+
+   As the minimization algorithm is stochastic, output will vary slightly
+   between runs.
+
+4) Optional: Find a suitable parameter set for the Grahnen energy model. 
+
+   Note that this is generally an unsolved research problem -- refer to the
+   paper cited above for one possible approach. The example below results in 
+   a solution that is unlikely to be optimal, so feel free to skip this step.
+   A better parameter set is already included with the code.
+
+   If you do choose to run it, this step will take some time: 45+ minutes on a 
+   desktop PC is not atypical.
+
+   First, produce score distributions for random sequences and conformations:
+
+   ./calc-termdists data/1d4tA-renum.bead data/1d4tB.bead 1000 folding > test.termdist
+   ./calc-termdists data/1d4tA-renum.bead data/1d4tB.bead 1000 binding > test2.termdist
+
+   Example output: data/1d4tA-renum.termdist, data/1d4tB.termdist
+   
+   If your protein does not contain disulfide bonds, consider removing this
+   term from the parameterization procedure by setting each value in the last 
+   column of numbers in the test.termdist file to "0.0". Similarly, you 
+   may wish to zero-out the ionic term (column 2 in test2.termdist) if your
+   protein-protein interaction does not natively contain a salt bridge.
+
+   Then, run the parameter optimization with your calculated native and
+   random scores as input:
+
+   ./run-mcmc-engparams data/fold-params-start.txt test.termdist folding 100000 0.1 0.1 0.1 > test.params
+   ./run-mcmc-engparams data/bind-params-start.txt test2.termdist binding 100000 0.1 0.1 0.1 > test2.params
+
+   Example output: 1d4tA-renum.params, 1d4tB.params.
+
+5) Optional: If you ran step #4, you may modify programs with hard-coded model
+   parameters (sh2-evolution-decoys.cpp, sh2-evolution-decoys+neo.cpp, 
+   engs-from-struct.cpp, test-motifs.cpp) to take advantage of your new 
+   parameter set. Lines that instantiate a GrahnenModel object need 
+   modification. 
+
+   If you skipped step #4, the default parameters are taken from the paper 
+   and reflect one reasonable solution for the SAP protein:
+
+   0.213649, 0.255238, 0.0351669, 0.193426, 0.00636471, 0.296156, 0.0, 0.970, 0.011, 0.019
+
+   Example input: best-folding-params.txt, best-binding-params.txt
+  
+   To follow the examples below, retain this set of parameters for now.
+
+6) Find the native folding and binding scores for the default parameters and
+   the SAP protein:
+
+   ./engs-from-struct data/1d4tA-renum.bead data/1d4tB.bead data/1d4tB.bead data/1d4tB.bead Grahnen
+
+   The FoldO and Bind* scores represent the folding and binding scores,
+   respectively. You may use several different ligands as input -- see 
+   "Advanced usage" for instructions on how to create novel ones. For now,
+   we will simply test the native ligand three times over.
+
+7) You are now ready to run simulations starting from the native state of 
+   your complex. As a test, try running a 10-generation simulation with 
+   population of 100 organisms and a per-bp mutation rate of 0.0032 (i.e. ~1 
+   mutation per gene per generation) for the SAP protein:
+
+   ./sh2-evolution-decoys 1d4tA.pheno 10 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead > 1d4tA-sim.seq
+
+   Note that the output (1d4tA-sim.seq) is somewhat compressed by showing only 
+   unique DNA sequences and their counts. The phenotype file (1d4tA.pheno) 
+   contains information about the overall phenotype counts in the population
+   for ease of tracking simulation progress.
+
+8) Finally, try sampling 100 protein sequences no more than 30% dissimilar 
+   from the SAP native sequences with large folding scores:
+
+   ./sample-seqs data/1d4tA-renum.bead data/1d4tB.bead data/1d4tA.seq folding 100 10 30 Grahnen
+
+   Sequences can similarly be sampled by binding score, or with another
+   parameter set -- see usage message.
+
+ADVANCED USAGE
+--------------
+
+1) Simulation over a phylogenetic tree:
+
+   Because simulations in CASS with even small population sizes tend to
+   be computationally demanding (e.g. simulating up to 30% divergence from
+   native for 1,000 organisms may take several days), there is no facility
+   included to input a tree directly. However, it is simple to simulate
+   evolution on each branch separately. This also presents an opportunity to
+   parallelize the work over several processors or machines.
+ 
+   As an example, consider a very simple rooted tree: (A:10,(B:5,C:5):5). We 
+   can easily simulate the branches as four separate processes, one for each 
+   external branch and one for the internal branch. First, simulate the A
+   branch from the root sequence as previously described:
+ 
+   ./sh2-evolution-decoys A-branch.pheno 10 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead > A-branch.seq
+ 
+   Second, simulate the internal branch (here, half the length of the A 
+   branch):
+   
+   ./sh2-evolution-decoys BC-branch.pheno 5 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead > BC-branch.seq
+   
+   We then need to decompress the sequence output data with the supplied 
+   script:
+ 
+   awk -f scripts/expand-seq-data.awk BC-branch.seq > BC-branch-full.seq
+ 
+   Finally, simulate the B and C branches starting from the decompressed file:
+   
+   ./sh2-evolution-decoys B-branch.pheno 5 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead BC-branch-full.seq > B-branch.seq
+   ./sh2-evolution-decoys C-branch.pheno 5 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead BC-branch-full.seq > C-branch.seq
+ 
+   The approach described above also makes it easy to model non-stationary
+   evolutionary processes: simulations can be stopped at any arbitrary time
+   and restarted with different mutation rates, selective coefficients, etc.
+   Further, this functionality provides a way to re-start simulations 
+   that crashed from their last good state.
+  
+   If you're having trouble, make sure that records are complete for the last
+   generation before proceeding (e.g. the "Count" column for that generation
+   sums to your population size), and that there are no formatting errors.
+   Since the program re-threads the supplied sequences with a degree of
+   randomness, you may be faced with an error message that says all the
+   organisms died. In this case, simply re-start until the problem goes
+   away.
+
+2) Simulation of changing function:
+
+   The sh2-evolution-decoys+neo executable represents one possible scenario to
+   simulate: a protein with one native ligand which must be bound, one decoy
+   ligand whose binding decreases fitness, and one novel ligand for which
+   binding increases fitness. Try a short simulation to see if any phenotypes 
+   that can bind the novel ligand, or any that happen to bind the decoy, 
+   emerge:
+ 
+   ./sh2-evolution-decoys+neo 1d4tA-novel.pheno 10 100 0.0032 -60 -19 data/1d4tA-renum.bead data/1d4tA.dna data/1d4tB.bead data/decoy-ligand-RLPTIYICITG.bead data/novel-ligand-GEPTIYTGVIH.bead > 1d4tA-novel.seq
+ 
+   Open the file 1d4tA-novel.pheno to get a quick look at which phenotypes
+   cropped up during the simulation, and if any of them fixed in the
+   population. Sequences are scored as being "Dead" (failed to fold or bind
+   the native ligand), "Normal" (wild-type phenotype), "Decoy" (binds the
+   native and decoy ligands), "NeoP" (binds the native and novel ligands) and 
+   "DecoyNeoP" (binds all three ligands). 
+ 
+   Combined with the strategy for simulating along trees described above,
+   it is easy to model such situations as varying function in different
+   clades, convergent evolution, etc.
+
+3) Testing scoring efficiency of a particular parameter set for a model.
+
+   Programs test-engfunc-nodecoys and test-bindfunc-nodecoys will produce a 
+   distribution of scores for random sequences, from which you can
+   estimate the accuracy metric of your choice (Z-score of the native, 
+   gap to the nearest random score, FDR, etc.). The parameter optimization 
+   program itself does produce a Z-score for the starting and optimal 
+   parameter sets, but it tends to be overestimated. Try it for the SAP-SLAM 
+   complex:
+   
+   ./test-engfunc-nodecoys data/1d4tA-renum.bead 100 Grahnen 1d4tA.engs data/best-folding-params.txt
+   ./test-bindfunc-nodecoys data/1d4tA-renum.bead data/1d4tB.bead 100 Grahnen 1d4tB.engs data/best-binding-params.txt
+ 
+   This may take a while, but the full results can be found in 1d4tA.engs
+   (folding score) and 1d4tB.engs (binding score) when finished.
+ 
+4) The models work best if starting near a modeled fold score optimum rather
+   than the native sequences of your proteins. See protein-stable-adjusted.bead 
+   and ligand-stable-adjusted.bead for an example of structures that are more 
+   stable than the native SAP protein. You can use the included sample-seqs 
+   program to obtain such stable sequences:
+ 
+   ./sample-seqs data/1d4tA-renum.bead data/1d4tB.bead data/1d4tA.seq folding 100 5 100 Grahnen
+ 
+   Note that only 100 attempted substitutions will rarely produce a sequence
+   near even a local maximum of folding score: consider increasing the
+   number of MCMC steps one or several orders of magnitude beyond this. As 
+   previously, consult Grahnen et al, 2011, BMC Evol Biol 11:361 for more 
+   details.
+ 
+5) Effective simulation requires a decoy ligand to restrict sequence diversity
+   at the binding site (see Liberles et al, 2011, Proc R Soc B 278 and
+   Grahnen et al, 2011, BMC Evol Biol 11:361 for details). CASS provides a
+   facility for sampling decoy ligands with a particular sequence motif.
+ 
+   WARNING: This approach will only work if SCWRL is properly installed (see 
+   "Troubleshooting" below). Running the program without SCWRL may do nothing,
+   or use up all your system resources, or hang your terminal, or maybe even 
+   crash your session. 
+ 
+   When SCWRL is properly installed and the code has been compiled to match,
+   sample a few decoys:
+ 
+   ./test-motifs data/1d4tA-renum.bead data/1d4tB.bead "XXXTIYXX(I/V)XX" 10 Grahnen data/1d4tA.dna data/1d4tA-bindsite-residues.txt 2
+   
+   The "NumBetter" output field records the number of mutant protein sequences
+   for which the decoy ligand binds _better_ than the native ligand (out
+   of 100 tested). Depending on the stringency of negative design you wish to
+   apply to the binding site, you may wish this number to be lower or higher.
+ 
+   Motifs are specified on roughly the same format as a PROSITE pattern.
+   For positions that can contain any type of residue, use "X". To restrict
+   a position to a single residue, use only that residue (e.g. "A" or "K").
+   If a position may contain some subset of all possible residues, specify
+   it with parentheses and slashes (e.g. a position marked "(I/V/A/L)" may
+   contain either I, V, A or L, but no other residues). See above for a
+   full example for an 11-residue peptide.
+   
+   Once a suitable ligand sequence has been found, use SCWRL and pdb2bead to 
+   produce a .bead file, and run engs-from-struct to obtain a binding score for
+   simulation use.
+ 
+   Example output: data/decoy-ligand-RLPTIYICITG.bead.
+
+6) To visualize bead structures with appropriate atom radii, the
+   included Pymol script (scripts/adjust-bead-sizes.pml) comes in handy:
+ 
+   pymol data/1d4tA-renum.bead scripts/adjust-bead-size.pml
+   show spheres
+   
+   This also facilitates comparison with all-atom structures:
+ 
+   pymol data/1d4tA-renum.bead data/1d4tA-renum.pdb scripts/adjust-bead-size.pml
+   show spheres, 1d4tA-renum.bead
+   show sticks, 1d4tA-renum
+ 
+7) Usage of the all-atom structural model, the Bastolla energy function, and
+   an experimental Go model in sequence space, is occasionally supported. 
+   Programs that offer these options will mention them in the usage message, 
+   and others can be modified to do so by changing the instantiation of the 
+   EnergyModel object.
+  
+8) To create your own energy function, derive from the EnergyModel base class.
+   Similarly, you can implement your own structure representation by deriving 
+   from the Structure base class, and or your own sampling strategy by
+   deriving from the Parameter, Proposal and MCMC base classes. Fitness
+   functions for simulations are easiest to alter by deriving a new
+   subclass of the Organism base class.
+ 
+Troubleshooting
+---------------
+
+* For trouble with compiling the code, and error messages encountered when
+  running it, see 
+
+  http://www.wyomingbioinformatics.org/LiberlesGroup/CASS/
+
+  for more detailed information.
+
+* For full functionality, be sure to install SCWRL 3.0 or 4.0. At the time
+  of writing, it was hosted at http://dunbrack.fccc.edu/scwrl4/.
+
+  Alter lines 19-24 in AllAtomStructure.h to suit your local installation and 
+  preferences. Default is to run SCWRL3 for a maximum of 10 seconds.
+
+  Note that certain functionality (e.g. AllAtomStructure::threadSequence()
+  and programs that use this function) will not be available without
+  some version of SCWRL installed.
+
+* Tested on the following systems:
+
+  - 64-bit Debian Linux (release 'lenny') with gcc 4.3.2
+  - 64-bit Ubuntu Linux (release 11.04) with gcc 4.5.2 or gcc 4.6.1
+  - 64-bit Ubuntu Linux (release 12.04) with gcc 4.6.3
+  - 64-bit CentOS Linux (release 5.8) with gcc 4.4.6
+
+  The software was not tested on other platforms, although in principle
+  any Unix clone (such as MacOS) with gcc version 4.3 or higher should work. 
+
+  Windows is not supported, although CygWin (http://www.cygwin.com/) and 
+  MinGW (http://www.mingw.org/) may be helpful if you wish to attempt
+  installation on that OS.
+
+Change log
+----------
+* 2013-05-21: Minor bug was fixed. 
+
+  - Fixed the bug in calculating the distance between Cα and Cβ beads. 

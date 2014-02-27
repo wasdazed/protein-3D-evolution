@@ -1,0 +1,20 @@
+0. Looking for SH2 domain containing structures
+
+http://www.rcsb.org/pdb/search/advSearch.do
+
+PF00017
+
+1. unzip
+
+find SH2_pdb_70/ -name '*.gz' -exec gunzip {} ';'
+
+2. pdf-pfam mappings
+
+ftp://ftp.sanger.ac.uk/pub/databases/Pfam/mappings/pdb_pfam_mapping.txt
+
+#cut SH2 domains from pdb and renumber
+
+Rscript /home/koshka/work/DAVID/homologs_contact_map/Rscripts/renumber-chains.R
+
+3. calc_contact_maps.sh
+

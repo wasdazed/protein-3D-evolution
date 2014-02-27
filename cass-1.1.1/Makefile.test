@@ -1,0 +1,37 @@
+#
+# Options
+#
+VPATH = ./randomgen
+CC = g++
+CFLAGS = -c -std=c++0x
+
+#
+# Compile and link all tests 
+#
+all: sampling
+
+sampling: test-sampling.o mersenne.o userintf.o
+	$(CC) -o test-sampling $^
+
+#
+# Targets for testing
+#
+test-sampling.o: test-sampling.cpp
+	$(CC) $(CFLAGS) $<
+
+#
+# Targets for random number generation
+#
+mersenne.o: mersenne.cpp randomc.h
+	$(CC) $(CFLAGS) $<
+
+userintf.o: userintf.cpp
+	$(CC) $(CFLAGS) $<
+
+#
+# Phony targets
+#
+clean:
+	rm -f *.o
+
+
