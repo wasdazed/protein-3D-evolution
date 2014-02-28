@@ -1,0 +1,23 @@
+#!/bin/bash
+# path/filename for standard error.
+#PBS -e /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2/runMammoth.error
+
+# path/filename for standard output.
+#PBS -o /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2/runMammoth.log
+
+# queue name, one of { gpu,x86_64,test,ib,x86_64_low,benchmark,galaxy,bigmem }
+#PBS -q bigmem
+#PBS -m n
+# This jobs's working directory            
+echo Working directory is /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2
+cd /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2
+
+echo Time is `date`
+echo Directory is `pwd`
+
+echo "`date`: Started job from $USER at queue bigmem" >> /data/guest/pbs_stats.txt
+START=$(date +%s)
+./runMammoth
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+echo "`date`: Finished job from $USER at queue bigmem in $DIFF seconds" >> /data/guest/pbs_stats.txt

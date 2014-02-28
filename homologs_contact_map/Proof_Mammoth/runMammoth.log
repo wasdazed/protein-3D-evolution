@@ -1,0 +1,29 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+Working directory is /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2
+Time is Thu Nov 14 17:35:41 CET 2013
+Directory is /data/marenas/Diversity_Function_Project/CLASSIFY_PDBs/CLUSTERS/Aldolase_C2
+ Max.number of structures:         165 max=         165
+           1 buffer=./1aldA00.pdb
+           2 buffer=./1fbaA00.pdb
+           3 buffer=./1htiA00.pdb
+           4 buffer=./1htiB00.pdb
+           5 buffer=./1i45B00.pdb
+           6 buffer=./1neyA00.pdb
+           7 buffer=./1qo5R00.pdb
+           8 buffer=./1tmhB00.pdb
+           9 buffer=./1treA00.pdb
+          10 buffer=./1treB00.pdb
+          11 buffer=./1wyiB00.pdb
+          12 buffer=./1xdlA00.pdb
+          13 buffer=./1xdlB00.pdb
+          14 buffer=./1xdlC00.pdb
+          15 buffer=./1xdlD00.pdb
+          16 buffer=./1xdmA00.pdb
+          17 buffer=./1xdmD00.pdb
+          18 buffer=./1xdmY00.pdb
+          19 buffer=./1xfbK00.pdb
+          20 buffer=./2aldA00.pdb
+          21 buffer=./2ypiA00.pdb
+          22 buffer=./2ypiB00.pdb
+          23 buffer=./3ypiB00.pdb
